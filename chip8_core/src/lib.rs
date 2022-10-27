@@ -1,4 +1,5 @@
 pub mod emulator;
+pub mod fontset;
 
 #[cfg(test)]
 mod tests {
