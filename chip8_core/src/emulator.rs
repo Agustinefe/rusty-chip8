@@ -68,6 +68,20 @@ impl Emulator {
         op
     }
 
+    fn execute(&mut self, op: u16) {
+        let hex_digit1: u16 = (op & 0xF000) >> 12;
+        let hex_digit2: u16 = (op & 0xF000) >> 8;
+        let hex_digit3: u16 = (op & 0xF000) >> 4;
+        let hex_digit4: u16 = op & 0xF000;
+
+        match (hex_digit1, hex_digit2, hex_digit3, hex_digit4) {
+
+
+            (_, _, _ , _) => unimplemented!("Unimplemented opcode: {}", op),
+        }
+
+    }
+
     pub fn reset(&mut self) {
         self.pc = START_ADDR;
         self.ram = [0; RAM_SIZE];
