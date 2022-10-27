@@ -8,6 +8,8 @@ pub const SCREEN_HEIGHT: usize = 32;
 
 pub const START_ADDR: u16 = 0x200;
 
+use crate::fontset::*;
+
 
 /// We use type uN (where N is a 8 aligned number) because
 /// it defines the amount of bits we need for every number.
@@ -27,7 +29,7 @@ pub struct Emulator {
 impl Emulator {
 
     pub fn new() -> Self {
-        Self {
+        let mut new_emulator: Emulator = Self {
             pc: START_ADDR,
             ram: [0; RAM_SIZE],
             screen: [false; SCREEN_WIDTH * SCREEN_HEIGHT],
@@ -38,7 +40,11 @@ impl Emulator {
             keys: [false; NUM_KEYS],
             dt: 0,
             st: 0,
-        }
+        };
+
+        new_emulator.ram[..FONTSET_SIZE].copy_from_slice(&FONTSET);
+
+        new_emulator
     }
 
     // Stack management functions
@@ -51,6 +57,20 @@ impl Emulator {
     fn pop(&mut self) -> u16 {
         self.sp -= 1;
         self.stack[self.sp as usize]
+    }
+
+    pub fn reset(&mut self) {
+        self.pc = START_ADDR;
+        self.ram = [0; RAM_SIZE];
+        self.screen = [false; SCREEN_WIDTH * SCREEN_HEIGHT];
+        self.v_reg = [0; NUM_VREGS];
+        self.i_reg = 0;
+        self.sp = 0;
+        self.stack=  [0; STACK_SIZE];
+        self.keys = [false; NUM_KEYS];
+        self.dt = 0;
+        self.st = 0;
+        self.ram[..FONTSET_SIZE].copy_from_slice(&FONTSET);
     }
 
 }
