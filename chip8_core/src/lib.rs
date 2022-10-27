@@ -1,3 +1,5 @@
+pub mod emulator;
+
 #[cfg(test)]
 mod tests {
     #[test]
