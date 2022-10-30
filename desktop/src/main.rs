@@ -1,6 +1,8 @@
 use chip8_core::*;
 use std::env;
 
+use sdl2::event::Event;
+
 const SCALE: u32 = 15;
 const WINDOW_WIDTH: u32 = (emulator::SCREEN_WIDTH as u32) * SCALE;
 const WINDOW_HEIGHT: u32 = (emulator::SCREEN_HEIGHT as u32) * SCALE;
@@ -30,5 +32,15 @@ fn main() {
 
     canvas.clear();
     canvas.present();
+
+    let mut event_pump = sdl_context.event_pump().unwrap();
     
+    'gameloop: loop {
+        for evt in event_pump.poll_iter() {
+            match evt {
+                Event::Quit{..} => break 'gameloop,
+                _ => ()
+            }
+        }
+    }
 }
