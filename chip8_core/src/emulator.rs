@@ -208,7 +208,7 @@ impl Emulator {
                     let y: usize = (y_coord + y_line) as usize % SCREEN_HEIGHT;
 
                     // Get the pixel's index for the ID screen array
-                    let idx = x + SCREEN_WIDTH * y;
+                    let idx: usize = x + SCREEN_WIDTH * y;
 
                     // Check if we're about to flip the pixel and set
                     flipped |= self.screen[idx];
@@ -220,6 +220,90 @@ impl Emulator {
         // Populate VF register
         self.v_reg[FLAG_REG] = if flipped {1} else {0};
 
+    }
+
+    fn skip_if_key_pressed(&mut self, idx: usize) {
+        let vx: u8 = self.v_reg[idx];
+        let key: bool = self.keys[vx as usize];
+        if key {
+            self.pc += 2;
+        }
+    }
+
+    fn skip_if_key_not_pressed(&mut self, idx: usize) {
+        let vx: u8 = self.v_reg[idx];
+        let key: bool = self.keys[vx as usize];
+        if !key {
+            self.pc += 2;
+        }
+    }
+
+    fn assign_delay_timer_to_reg(&mut self, idx: usize) {
+        self.v_reg[idx] = self.dt;
+    }
+
+    fn wait_for_key_press(&mut self, idx: usize) {
+        let mut pressed: bool = false;
+
+        for i in 0..self.keys.len() {
+            if self.keys[i] {
+                self.v_reg[idx] = i as u8;
+                pressed = true;
+                break;
+            }
+        }
+
+        if !pressed {
+            // Redo opcode
+            self.pc -= 2;
+        }
+    }
+
+    fn assign_reg_to_delay_timer(&mut self, idx: usize) {
+        self.dt = self.v_reg[idx];
+    }
+
+    fn assign_reg_to_sound_timer(&mut self, idx: usize) {
+        self.st = self.v_reg[idx];
+    }
+
+    fn increment_ram_pointer_by_reg(&mut self, idx: usize) {
+        let vx: u16 = self.v_reg[idx] as u16;
+        self.i_reg += self.i_reg.wrapping_add(vx);
+    }
+
+    fn set_ram_pointer_to_font_addr(&mut self, idx: usize) {
+        let c: u16 = self.v_reg[idx] as u16;
+        self.i_reg = c * 5;
+    }
+
+    /// BCD: Binary-Coded Decimal
+    fn set_ram_pointer_to_bcd_of_reg(&mut self, idx: usize) {
+        let vx: f32 = self.v_reg[idx] as f32;
+
+        let hundreds: u8 = (vx / 100.0).floor() as u8;
+        let tens: u8 = ((vx / 10.0) % 10.0).floor() as u8;
+        let ones: u8 = (vx % 1.0).floor() as u8;
+
+        self.ram[self.i_reg as usize] = hundreds;
+        self.ram[(self.i_reg + 1) as usize] = tens;
+        self.ram[(self.i_reg + 2) as usize] = ones;
+    }
+
+    fn store_regs_in_ram(&mut self, idx: usize) {
+        let i: usize = self.i_reg as usize;
+
+        for x in 0..=idx {
+            self.ram[i + x] = self.v_reg[x];
+        }
+    }
+
+    fn load_regs_from_ram(&mut self, idx: usize) {
+        let i: usize = self.i_reg as usize;
+
+        for x in 0..=idx {
+            self.v_reg[x] = self.ram[i + x];
+        }
     }
 
     /// NOP: do nothing
@@ -303,6 +387,38 @@ impl Emulator {
             // DRAW
             (0xD, _, _, _) => self.draw_sprite(hex_digit2, hex_digit3, hex_digit4),
 
+            // SKIP KEY PRESS
+            (0xE, _, 9, 0xE) => self.skip_if_key_pressed(hex_digit2 as usize),
+
+            // SKIP KEY RELEASE
+            (0xE, _, 0xA, 1) => self.skip_if_key_not_pressed(hex_digit2 as usize),
+
+            // VX = DT
+            (0xF, _, 0, 7) => self.assign_delay_timer_to_reg(hex_digit2 as usize),
+
+            // WAIT KEY
+            (0xF, _, 0, 0xA) => self.wait_for_key_press(hex_digit2 as usize),
+
+            // DT = VX
+            (0xF, _, 1, 5) => self.assign_reg_to_delay_timer(hex_digit2 as usize),
+
+            // ST = VX
+            (0xF, _, 1, 8) => self.assign_reg_to_sound_timer(hex_digit2 as usize),
+
+            // I += VX
+            (0xF, _, 1, 0xE) => self.increment_ram_pointer_by_reg(hex_digit2 as usize),
+
+            // I = FONT
+            (OxF, _, 2, 9) => self.set_ram_pointer_to_font_addr(hex_digit2 as usize),
+
+            // I = BCD of VX
+            (0xF, _, 3, 3) => self.set_ram_pointer_to_bcd_of_reg(hex_digit2 as usize),
+
+            // STORE V0..VX INTO RAM
+            (0xF, _, 5, 5) => self.store_regs_in_ram(hex_digit2 as usize),
+
+            // LOAD V0..VX FROM RAM
+            (0xF, _, 6, 5) =>self.load_regs_from_ram(hex_digit2 as usize),
 
             (_, _, _ , _) => unimplemented!("Unimplemented opcode: {}", op),
         }
@@ -325,6 +441,8 @@ impl Emulator {
 
     pub fn tick(&mut self) {
         let op = self.fetch();
+        // Decode and execute
+        self.execute(op);
     }
 
     pub fn tick_timers(&mut self) {
