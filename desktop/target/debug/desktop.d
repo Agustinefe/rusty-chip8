@@ -1,0 +1,1 @@
+/home/firmapaz/IdeaProjects/chip8/rusty-chip8/desktop/target/debug/desktop: /home/firmapaz/IdeaProjects/chip8/rusty-chip8/chip8_core/src/emulator.rs /home/firmapaz/IdeaProjects/chip8/rusty-chip8/chip8_core/src/fontset.rs /home/firmapaz/IdeaProjects/chip8/rusty-chip8/chip8_core/src/lib.rs /home/firmapaz/IdeaProjects/chip8/rusty-chip8/desktop/src/main.rs
